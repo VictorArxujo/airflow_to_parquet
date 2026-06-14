@@ -1,37 +1,33 @@
-from pymongo import MongoClient
 import os
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
-MONGO_URI = "mongodb://admin:Metrion%402024@127.0.0.1:27017/metrion?authSource=admin"
-NOME_BANCO = "metrion"
-NOME_COLECAO = "mensagens"
+# Carrega as variáveis do arquivo .env
+load_dotenv()
+
+MONGO_URI = os.getenv("MONGO_URI")
+NOME_BANCO = os.getenv("MONGO_DB")
+NOME_COLECAO = os.getenv("MONGO_COLLECTION")
 
 def get_db():
+    # Estabelece a conexão base com o banco de dados
     client = MongoClient(MONGO_URI) 
-    return client[NOME_BANCO] # Retornando o Client
+    return client[NOME_BANCO]
 
-def get_data():
-    try:
-        db = conect_to_db()
-    except Exception as e:
-        print(f"Erro ao conectar ao banco de dados: {e}")
+def get_data(query=None):
+    # Busca dados no MongoDB, aplicando filtros de lote se fornecidos
+    db = get_db()
+    if db is None:
         return None
+        
     collection = db[NOME_COLECAO]
-    cursor = collection.find() 
-    data = list(cursor)  # Convertendo o cursor para uma lista
-    return data
+    cursor = collection.find(query or {}) 
+    return list(cursor)
 
-
-
-
-def conect_to_db():
-    print('Tentando se conectar no banco')
-    try:
-        db = get_db()
-        db.command('ping')
-        print('Conexão bem sucedida')
-
-    except Exception as e:
-        print(f'Erro ao se conectar no banco: {e}')
-        return None
-
-    return db # Retornando o banco de dados
+def delete_data(query):
+    # Exclui documentos permanentemente baseados na regra de tempo
+    db = get_db()
+    if db is not None:
+        resultado = db[NOME_COLECAO].delete_many(query)
+        return resultado.deleted_count
+    return 0
