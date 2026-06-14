@@ -1,4 +1,4 @@
-version: '3.8'
+name: parquet_airflow
 
 x-airflow-common:
   &airflow-common
@@ -34,7 +34,7 @@ services:
   # O cérebro do Airflow (Guarda o status das DAGs)
   postgres:
     image: postgres:15
-    container_name: airflow_postgres
+    container_name: airflow_postgres_parquet
     environment:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
@@ -52,7 +52,7 @@ services:
   # Inicializador (Prepara o terreno na primeira vez que rodar)
   airflow-init:
     <<: *airflow-common
-    container_name: airflow_init
+    container_name: airflow_init_parquet
     command: version
     environment:
       <<: *airflow-common-env
@@ -66,7 +66,7 @@ services:
   # Interface Gráfica (localhost:8080)
   airflow-webserver:
     <<: *airflow-common
-    container_name: airflow_webserver
+    container_name: airflow_webserver_parquet
     command: webserver
     ports:
       - "8080:8080"
@@ -85,7 +85,7 @@ services:
   # O Motor de Execução (O seu "Mordomo")
   airflow-scheduler:
     <<: *airflow-common
-    container_name: airflow_scheduler
+    container_name: airflow_scheduler_parquet
     command: scheduler
     restart: always
     depends_on:
