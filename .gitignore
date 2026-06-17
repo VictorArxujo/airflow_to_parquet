@@ -3,9 +3,3 @@
 # Caches Python
 __pycache__/
 *.pyc
-
-# Área de staging (dados brutos temporários entre as DAGs) — não versionar
-data/staging/
-
-# Logs do Airflow
-logs/
