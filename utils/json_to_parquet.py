@@ -7,6 +7,38 @@ pd.set_option('display.max_colwidth', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 
+def _payload_vazio(payload):
+    """True se o payload é um pacote de leituras com TODOS os valores vazios.
+
+    A telemetria traz dicts por dispositivo (ex.: 'Pextron', 'COMBINER1',
+    'INVERSOR1') cujos valores são as leituras. Quando o equipamento não
+    responde, todas as leituras vêm como string vazia (""). Esses pacotes são
+    ruído e não devem ser arquivados.
+
+    Chaves de metadado ('time'/'timestamp') são ignoradas. Payloads que não são
+    dict de leitura (ex.: {'status': '...'}) nunca são considerados vazios.
+    """
+    if not isinstance(payload, dict):
+        return False
+
+    tem_chave_de_dado = False
+    for chave, valor in payload.items():
+        if chave in ('time', 'timestamp'):
+            continue
+        tem_chave_de_dado = True
+        if isinstance(valor, dict):
+            if any(str(v).strip() != '' for v in valor.values()):
+                return False
+        elif isinstance(valor, list):
+            if len(valor) > 0:
+                return False
+        elif str(valor).strip() != '':
+            return False
+
+    # Só é "vazio" se havia ao menos uma chave de dado e nenhuma tinha valor.
+    return tem_chave_de_dado
+
+
 def limpar_dados(data):
     # Aplica as regras de negócio, remove nulos e vetoriza o JSON
     if not data:
@@ -22,6 +54,13 @@ def limpar_dados(data):
 
     if 'payload' in df.columns:
         df = df.dropna(subset=['payload'])
+
+        # Descarta pacotes de leitura totalmente vazios (equipamento sem resposta)
+        antes = len(df)
+        df = df[~df['payload'].apply(_payload_vazio)]
+        descartados = antes - len(df)
+        if descartados:
+            print(f"🚫 {descartados} pacotes com todas as leituras vazias descartados.")
 
     df['payload'] = df['payload'].apply(
         lambda x: json.dumps(x) if isinstance(x, (dict, list)) else str(x)
