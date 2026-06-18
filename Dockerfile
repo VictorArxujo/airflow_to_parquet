@@ -17,7 +17,7 @@ RUN mkdir -p /app/logs /app/data/dados_parquet
 
 # Agenda o arquivamento diário (horários em America/Sao_Paulo).
 # O script é idempotente e faz backfill, então uma 2ª execução é só rede de segurança.
-RUN echo "11 40 * * * root cd /app && /usr/local/bin/python /app/app.py >> /app/logs/cron.log 2>&1" > /etc/cron.d/arquivamento && \
+RUN echo "00 0 * * * root cd /app && /usr/local/bin/python /app/app.py >> /app/logs/cron.log 2>&1" > /etc/cron.d/arquivamento && \
     echo "" >> /etc/cron.d/arquivamento && \
     chmod 0644 /etc/cron.d/arquivamento
 
