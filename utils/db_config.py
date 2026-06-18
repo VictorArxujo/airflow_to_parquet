@@ -24,6 +24,13 @@ def get_data(query=None):
     cursor = collection.find(query or {}) 
     return list(cursor)
 
+def count_data(query=None):
+    # Conta documentos sem carregá-los na memória (usado no modo de simulação)
+    db = get_db()
+    if db is None:
+        return 0
+    return db[NOME_COLECAO].count_documents(query or {})
+
 def delete_data(query):
     # Exclui documentos permanentemente baseados na regra de tempo
     db = get_db()

@@ -1,11 +1,18 @@
+import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from utils.db_config import get_db, get_data, delete_data, NOME_COLECAO
+from utils.db_config import get_db, get_data, delete_data, count_data, NOME_COLECAO
 from utils.json_to_parquet import limpar_dados, converter_para_parquet
 
 # Quantos dias de telemetria "viva" devem permanecer no MongoDB.
 # Tudo anterior a (hoje - DIAS_RETENCAO) é arquivado em Parquet e expurgado.
-DIAS_RETENCAO = 14
+# Configurável via .env (ex.: DIAS_RETENCAO=0 para testes); padrão de produção: 14.
+DIAS_RETENCAO = int(os.getenv("DIAS_RETENCAO", "0"))
+
+# Modo de simulação: com DRY_RUN=1 o script só REPORTA o que faria (quantos
+# registros por dia), sem gravar Parquet e SEM apagar nada do Mongo.
+# Útil pra validar com segurança antes da primeira execução em produção.
+MODO_SIMULACAO = os.getenv("DRY_RUN", "0").strip().lower() in ("1", "true", "yes")
 
 TZ = ZoneInfo("UTC")
 
@@ -27,6 +34,12 @@ def arquivar_e_expurgar_dia(inicio_dia, fim_dia):
     """
     janela = {"received_at": {"$gte": inicio_dia, "$lt": fim_dia}}
     dia_str = inicio_dia.strftime("%Y-%m-%d")
+
+    if MODO_SIMULACAO:
+        # Só conta (count_documents) — não carrega, não grava, não apaga.
+        qtd = count_data(janela)
+        print(f"🔎 [SIMULAÇÃO] [{dia_str}] {qtd} registros seriam arquivados e expurgados (nada foi alterado).")
+        return True
 
     dados_brutos = get_data(janela)
     if not dados_brutos:
@@ -75,6 +88,8 @@ def arquivar_telemetria():
     cutoff = hoje - timedelta(days=DIAS_RETENCAO)  # arquiva tudo < cutoff
 
     print("🗄️  INICIANDO ARQUIVAMENTO DIÁRIO DE TELEMETRIA")
+    if MODO_SIMULACAO:
+        print("🔎 MODO SIMULAÇÃO (DRY_RUN): nada será gravado nem apagado.")
     print(f"-> Registro mais antigo:        {inicio.date()}")
     print(f"-> Janela de retenção:          {DIAS_RETENCAO} dias")
     print(f"-> Preservar a partir de:       {cutoff.date()} (inclusive)\n")
@@ -91,8 +106,12 @@ def arquivar_telemetria():
             return
         dia = proximo_dia
 
-    print(f"\n🏁 Arquivamento concluído! O MongoDB mantém apenas os últimos "
-          f"{DIAS_RETENCAO} dias (a partir de {cutoff.date()}).")
+    if MODO_SIMULACAO:
+        print(f"\n🔎 SIMULAÇÃO concluída! Nada foi alterado. Em modo real, o MongoDB "
+              f"manteria apenas os últimos {DIAS_RETENCAO} dias (a partir de {cutoff.date()}).")
+    else:
+        print(f"\n🏁 Arquivamento concluído! O MongoDB mantém apenas os últimos "
+              f"{DIAS_RETENCAO} dias (a partir de {cutoff.date()}).")
 
 
 if __name__ == "__main__":

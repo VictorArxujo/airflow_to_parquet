@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.vscode
+__pycache__/
+*.pyc
+logs/
+data/staging/
+data/dados_parquet/
+*.parquet
+CLAUDE.md
+testes.py

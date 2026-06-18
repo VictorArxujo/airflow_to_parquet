@@ -3,3 +3,6 @@
 # Caches Python
 __pycache__/
 *.pyc
+
+# Logs do cron (container)
+logs/

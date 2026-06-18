@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+
+    container_name: arquivador_parquet
+
+    restart: always
+
+    env_file:
+      - .env
+
+    environment:
+      - TZ=America/Sao_Paulo
+
+    volumes:
+      # Persiste os Parquets gerados (objetivo do projeto) e os logs do cron.
+      - ./data/dados_parquet:/app/data/dados_parquet
+      - ./logs:/app/logs
+
+    # ── Como alcançar o MongoDB a partir do container ──────────────────────────
+    # 'localhost' NÃO funciona dentro do container. O Mongo roda em OUTRO compose
+    # (container 'metrion_mongo', serviço 'mongo'), então este serviço entra na
+    # rede externa daquele stack e o .env usa MONGO_URI=...@mongo:27017/...
+    networks:
+      - mongo_net
+
+networks:
+  mongo_net:
+    external: true
+    name: mqqt_reciever_default
